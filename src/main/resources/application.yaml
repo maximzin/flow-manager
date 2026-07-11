@@ -1,3 +1,56 @@
 spring:
   application:
     name: flow-manager
+
+  ### Kafka
+  kafka:
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 5
+      properties:
+        retry.backoff: 1000
+        delivery.timeout.ms: 120000
+        enable.idempotence: true
+        linger.ms: 0
+        max.in.flight.requests.per.connection: 5
+        request.timeout.ms: 30000
+    consumer:
+      group-id: conversion-processed-events-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.zinoviev.conversion_microservice.messaging.event.*
+        spring.json.type.mapping: com.zinoviev.conversion_microservice.messaging.event.ConversionProcessedEvent:com.zinoviev.flowManager.conversion.messaging.event.ConversionProcessedEvent
+        spring.json.value.default.type: com.zinoviev.flowManager.messaging.event.ConversionProcessedEvent
+
+  ### Postgres DB
+  jpa:
+    database: postgresql
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    change-log: classpath:db/db.changelog-master.yaml
+
+### Topic names
+topic:
+  conversion:
+    created:
+      events: conversion-created-events-topic
+    processed:
+      events: conversion-processed-events-topic
+
+### MinIO dir paths
+storage:
+  directory:
+    conversion:
+      original: /original/
+
+outbox:
+  conversion:
+    sending-period-cron: '0 */5 * * * *' # каждые 5 минут'
+
+logging:
+  charset:
+    console: UTF-8

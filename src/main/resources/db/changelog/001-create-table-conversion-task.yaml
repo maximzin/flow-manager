@@ -1,0 +1,46 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-table-conversion-task
+      author: max zinoviev
+      changes:
+        - createTable:
+            tableName: conversion_task
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_conversion_task
+              - column:
+                  name: status
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: original_file_key
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: converted_file_key
+                  type: text
+              - column:
+                  name: error_message
+                  type: text
+              - column:
+                  name: outbox_sent
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_processed_event_id
+                  type: UUID
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp

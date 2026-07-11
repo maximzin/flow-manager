@@ -1,0 +1,35 @@
+name: flow-manager-app
+
+services:
+
+#  java-spring-app:
+#    build: .
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/conversion_microservice
+#      SPRING_DATASOURCE_USERNAME: myuser
+#      SPRING_DATASOURCE_PASSWORD: 12345
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_db_flow_manager
+    environment:
+      POSTGRES_DB: flow_manager
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U myuser -d flow_manager" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pg_data:
