@@ -1,13 +1,18 @@
 package com.zinoviev.flowManager.storage.service;
 
+import com.zinoviev.flowManager.storage.dto.StorageFileDto;
+import com.zinoviev.flowManager.storage.exception.FileNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 
@@ -32,5 +37,28 @@ public class StorageServiceImpl implements StorageService {
 
         s3Client.putObject(request, RequestBody.fromBytes(fileBytes));
         log.info("В хранилище загружен файл: {}", fileKey);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public StorageFileDto getFile(String fileKey) {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileKey)
+                .build();
+
+        ResponseInputStream<GetObjectResponse> s3Object;
+        try {
+            s3Object = s3Client.getObject(request);
+        } catch (NoSuchKeyException e) {
+            log.error("Файл не найден, fileKey: {}", fileKey, e);
+            throw new FileNotFoundException("Файл не найден");
+        }
+
+        GetObjectResponse metadata = s3Object.response();
+        String contentType = metadata.contentType() != null ? metadata.contentType() : "application/octet-stream";
+        long contentLength = metadata.contentLength();
+
+        return new StorageFileDto(s3Object, fileKey, contentType, contentLength);
     }
 }

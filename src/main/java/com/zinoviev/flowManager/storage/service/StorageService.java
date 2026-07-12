@@ -1,9 +1,11 @@
 package com.zinoviev.flowManager.storage.service;
 
-import org.springframework.web.multipart.MultipartFile;
+import com.zinoviev.flowManager.storage.dto.StorageFileDto;
 
 public interface StorageService {
 
     void uploadFile(String fileKey, byte[] fileBytes, String contentType);
+
+    StorageFileDto getFile(String fileKey);
 
 }

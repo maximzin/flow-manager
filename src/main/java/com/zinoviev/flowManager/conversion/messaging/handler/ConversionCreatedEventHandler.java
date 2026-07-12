@@ -8,7 +8,6 @@ import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.core.exception.UnknownMessageStatusException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -41,8 +40,7 @@ public class ConversionCreatedEventHandler {
 
         // Обновим запись с учетом идемпотентности (поля last_processed_event_id)
         ConversionTask task = conversionTaskRepository.findById(uuidMessageKey)
-                .orElseThrow(() -> new ConversionTaskNotFoundException(
-                        String.format("Запись задачи с id: %s не найдена", uuidMessageKey)));
+                .orElseThrow(() -> new ConversionTaskNotFoundException("Запись не найдена"));
 
         // Проверяем на идемпотентность через eventId
         if (task.getLastProcessedEventId() != null

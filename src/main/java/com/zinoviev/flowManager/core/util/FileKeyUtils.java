@@ -5,7 +5,7 @@ public class FileKeyUtils {
     // Приватный пустой конструктор для запрета создания экземпляров класса
     private FileKeyUtils() {}
 
-    private static String parseFileNameWithExtension(String fileKey) {
+    public static String parseFileNameWithExtension(String fileKey) {
         if (fileKey == null || fileKey.isBlank()) {
             return "";
         }
@@ -16,9 +16,8 @@ public class FileKeyUtils {
                 : fileKey;
 
         // Получаем имя файла (всё после последнего слеша)
-        String fileName = normalizedKey.substring(
-                normalizedKey.lastIndexOf('/') + 1);
 
-        return fileName;
+        return normalizedKey.substring(
+                normalizedKey.lastIndexOf('/') + 1);
     }
 }
