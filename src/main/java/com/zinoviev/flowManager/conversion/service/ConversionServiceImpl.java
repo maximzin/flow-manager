@@ -1,7 +1,10 @@
 package com.zinoviev.flowManager.conversion.service;
 
 import com.zinoviev.flowManager.conversion.dao.ConversionTaskRepository;
+import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
+import com.zinoviev.flowManager.conversion.exception.ConversionTaskNotFoundException;
+import com.zinoviev.flowManager.conversion.messaging.event.ConversionEventStatus;
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.conversion.messaging.event.ConversionCreatedEvent;
 import com.zinoviev.flowManager.storage.service.StorageService;
@@ -13,6 +16,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -40,7 +44,6 @@ public class ConversionServiceImpl implements ConversionService {
     public ConversionTaskResponseDto processFileFromUser(MultipartFile file) throws IOException {
         // Создаем в MinIO копию файла
         String originalFileKey = String.join("", originalFilesDir, file.getOriginalFilename());
-        System.out.println(originalFileKey);
         storageService.uploadFile(originalFileKey, file.getBytes(), file.getContentType());
 
         // Делаем запись в БД
@@ -80,5 +83,64 @@ public class ConversionServiceImpl implements ConversionService {
 
             conversionTaskRepository.updateStatusAfterSending(ConversionTask.TaskStatus.PENDING, LocalDateTime.now());
         }
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ConversionStatusResponseDto getStatusOfConversionTask(UUID id) {
+        ConversionTask task = conversionTaskRepository.findById(id)
+                .orElseThrow(() -> new ConversionTaskNotFoundException(
+                        String.format("Запись задачи с id: %s не найдена", id)));
+
+        return new ConversionStatusResponseDto(
+                id,
+                task.getStatus(),
+                task.getUpdatedAt());
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public StreamingResponseBody getConvertedFileUU(UUID taskId) {
+        ConversionTask task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Задача не найдена"));
+
+        if (task.getStatus() != ConversionTask.TaskStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Файл ещё не готов или обработка завершилась с ошибкой");
+        }
+
+        String fileKey = task.getConvertedFileKey();
+        if (fileKey == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Отсутствует ссылка на сконвертированный файл");
+        }
+
+        // Получаем метаданные объекта, чтобы узнать размер и content-type
+        StatObjectResponse stat;
+        try {
+            stat = minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(minioProperties.getBucket())
+                            .object(fileKey)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Ошибка доступа к файлу в хранилище", e);
+        }
+
+        String contentType = stat.contentType() != null ? stat.contentType() : "application/octet-stream";
+        long contentLength = stat.size();
+
+        // Потоковая передача файла
+        StreamingResponseBody stream = outputStream -> {
+            try (InputStream inputStream = minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(minioProperties.getBucket())
+                            .object(fileKey)
+                            .build()
+            )) {
+                IOUtils.copy(inputStream, outputStream);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Ошибка при чтении файла", e);
+            }
+        };
     }
 }
