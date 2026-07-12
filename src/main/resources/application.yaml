@@ -2,9 +2,6 @@ spring:
   application:
     name: flow-manager
 
-  profiles:
-    active: local
-
   ### Kafka
   kafka:
     producer:
