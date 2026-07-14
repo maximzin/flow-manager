@@ -42,4 +42,26 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(body);
     }
+
+    @ExceptionHandler(DownloadException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ExceptionDto> handleDownloadException(DownloadException ex) {
+        ExceptionDto body = new ExceptionDto(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Ошибка скачивания файла",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    @ExceptionHandler(UploadException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ExceptionDto> handleUploadException(UploadException ex) {
+        ExceptionDto body = new ExceptionDto(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Ошибка загрузки файла",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
 }

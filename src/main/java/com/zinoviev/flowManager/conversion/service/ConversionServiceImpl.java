@@ -6,6 +6,7 @@ import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
 import com.zinoviev.flowManager.conversion.exception.ConversionProcessingException;
 import com.zinoviev.flowManager.conversion.exception.ConversionTaskNotFoundException;
 import com.zinoviev.flowManager.conversion.exception.FileNotConvertedException;
+import com.zinoviev.flowManager.conversion.exception.FileUploadException;
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.conversion.messaging.event.ConversionCreatedEvent;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
@@ -18,7 +19,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -37,30 +37,44 @@ public class ConversionServiceImpl implements ConversionService {
     @Value("${topic.conversion.created.events}")
     private String conversionCreatedEventsTopicName;
 
+    @Value("${conversion.uploading-tasks.duration-minutes-to-cleanup}")
+    private Integer durationMinutesToCleanupUploadingTasks;
+
     private final StorageService storageService;
     private final ConversionTaskRepository conversionTaskRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @Transactional
     @Override
-    public ConversionTaskResponseDto processFileFromUser(MultipartFile file) throws IOException {
-        // Создаем в MinIO копию файла
-        String originalFileKey = String.join("", originalFilesDir, file.getOriginalFilename());
-        storageService.uploadFile(originalFileKey, file.getBytes(), file.getContentType());
-
-        // Делаем запись в БД
+    public ConversionTaskResponseDto processFileFromUser(MultipartFile file) {
+        // 1. Создаём запись в БД
         UUID taskId = UUID.randomUUID();
-        ConversionTask newConversionTask = new ConversionTask(taskId, originalFileKey);
-        conversionTaskRepository.save(newConversionTask);
+        String originalFileKey = originalFilesDir + taskId + "/" + file.getOriginalFilename();
+
+        ConversionTask task = new ConversionTask(taskId, originalFileKey);
+        task.setStatus(ConversionTask.TaskStatus.UPLOADING);
+        task.setOutboxSent(false);
+        conversionTaskRepository.save(task);
+
+        // 2. Загружаем файл в MinIO
+        try {
+            storageService.uploadFile(originalFileKey, file.getBytes(), file.getContentType());
+        } catch (IOException e) {
+            log.error("Ошибка загрузки файла {}, taskId: {}", originalFileKey, taskId, e);
+            throw new FileUploadException("Не удалось сохранить файл");
+        }
+
+        // 3. Обновляем запись
+        task.setStatus(ConversionTask.TaskStatus.UPLOADED);
+        task.setOriginalFileKey(originalFileKey);
+        conversionTaskRepository.save(task);
 
         return new ConversionTaskResponseDto(
                 taskId,
-                ConversionTask.TaskStatus.PENDING,
-                LocalDateTime.now()
+                ConversionTask.TaskStatus.UPLOADED,
+                task.getCreatedAt()
         );
     }
 
-    @Transactional
     @Override
     public void sendTasksToKafka() throws ExecutionException, InterruptedException {
         List<ConversionTask> newTasks = conversionTaskRepository.findAllByStatusEqualsAndOutboxSentEquals(ConversionTask.TaskStatus.UPLOADED, false);
@@ -82,7 +96,9 @@ public class ConversionServiceImpl implements ConversionService {
             kafkaTemplate.send(record).get();
             log.info("Сообщение в {} успешно отправлено, conversion_task_id: {}", conversionCreatedEventsTopicName, task.getId());
 
-            conversionTaskRepository.updateStatusAfterSending(ConversionTask.TaskStatus.PENDING, LocalDateTime.now());
+            task.setStatus(ConversionTask.TaskStatus.PENDING);
+            task.setOutboxSent(true);
+            conversionTaskRepository.save(task);
         }
     }
 
@@ -120,5 +136,27 @@ public class ConversionServiceImpl implements ConversionService {
         }
 
         return storageService.getFile(fileKey);
+    }
+
+    @Transactional
+    @Override
+    public void cleanupUploadingTasks() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(durationMinutesToCleanupUploadingTasks);
+        List<ConversionTask> staleTasks = conversionTaskRepository
+                .findByStatusAndCreatedAtBefore(ConversionTask.TaskStatus.UPLOADING, threshold);
+
+        for (ConversionTask task : staleTasks) {
+            boolean fileExists = storageService.exists(task.getOriginalFileKey());
+            if (fileExists) {
+                task.setStatus(ConversionTask.TaskStatus.UPLOADED);
+                conversionTaskRepository.save(task);
+                log.info("Задача taskId: {} восстановлена: файл найден, статус обновлён на UPLOADED", task.getId());
+            } else {
+                task.setStatus(ConversionTask.TaskStatus.FAILED);
+                task.setErrorMessage("Файл не был загружен, задача удалена по таймауту");
+                conversionTaskRepository.save(task);
+                log.warn("Задача taskId: {} помечена как FAILED: файл отсутствует", task.getId());
+            }
+        }
     }
 }

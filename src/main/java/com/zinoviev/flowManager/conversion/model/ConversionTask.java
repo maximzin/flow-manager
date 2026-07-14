@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -37,13 +40,16 @@ public class ConversionTask {
     @Column(name = "last_processed_event_id")
     private UUID lastProcessedEventId;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public enum TaskStatus {
+        UPLOADING,
         UPLOADED,
         PENDING,
         COMPLETED,
@@ -55,6 +61,5 @@ public class ConversionTask {
         this.status = TaskStatus.UPLOADED;
         this.originalFileKey = originalFileKey;
         this.outboxSent = false;
-        this.setCreatedAt(LocalDateTime.now());
     }
 }

@@ -2,9 +2,6 @@ package com.zinoviev.flowManager.conversion.dao;
 
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,15 +11,6 @@ public interface ConversionTaskRepository extends JpaRepository<ConversionTask, 
 
     List<ConversionTask> findAllByStatusEqualsAndOutboxSentEquals(ConversionTask.TaskStatus status, boolean outboxSent);
 
-    @Modifying
-    @Query("""
-    UPDATE ConversionTask ct
-    SET 
-        ct.status = :newStatus,
-        ct.updatedAt = :updateAt,
-        ct.outboxSent = TRUE
-    """)
-    void updateStatusAfterSending(@Param("newStatus") ConversionTask.TaskStatus newStatus,
-                                  @Param("updateAt") LocalDateTime updateAt);
+    List<ConversionTask> findByStatusAndCreatedAtBefore(ConversionTask.TaskStatus taskStatus, LocalDateTime threshold);
 
 }

@@ -1,4 +1,4 @@
-package com.zinoviev.flowManager.conversion.outbox.component;
+package com.zinoviev.flowManager.conversion.component;
 
 import com.zinoviev.flowManager.conversion.service.ConversionService;
 import lombok.RequiredArgsConstructor;

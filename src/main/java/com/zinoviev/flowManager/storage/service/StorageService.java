@@ -8,4 +8,6 @@ public interface StorageService {
 
     StorageFileDto getFile(String fileKey);
 
+    boolean exists(String key);
+
 }

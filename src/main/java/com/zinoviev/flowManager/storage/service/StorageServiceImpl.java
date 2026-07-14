@@ -10,10 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
 
 @Service
@@ -60,5 +57,21 @@ public class StorageServiceImpl implements StorageService {
         long contentLength = metadata.contentLength();
 
         return new StorageFileDto(s3Object, fileKey, contentType, contentLength);
+    }
+
+    @Override
+    public boolean exists(String key) {
+        try {
+            s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build());
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        } catch (S3Exception e) {
+            log.error("Ошибка при проверке существования объекта, key: {}", key, e);
+            return false;
+        }
     }
 }

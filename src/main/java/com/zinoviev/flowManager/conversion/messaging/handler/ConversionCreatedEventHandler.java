@@ -16,7 +16,6 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Component
@@ -67,7 +66,6 @@ public class ConversionCreatedEventHandler {
 
         task.setConvertedFileKey(event.convertedFileKey());
         task.setLastProcessedEventId(event.eventId());
-        task.setUpdatedAt(LocalDateTime.now());
 
         conversionTaskRepository.save(task);
         log.info("Событие с messageKey: {} было успешно обработано", uuidMessageKey);

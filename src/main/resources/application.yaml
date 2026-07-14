@@ -51,6 +51,11 @@ outbox:
   conversion:
     sending-period-cron: '0 */5 * * * *' # каждые 5 минут'
 
+conversion:
+  uploading-tasks:
+    duration-minutes-to-cleanup: 30    # приводим в порядок записи, которым > минут
+    cleanup-period-cron: '0 * * * * *' # каждую минуту
+
 logging:
   charset:
     console: UTF-8
