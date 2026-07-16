@@ -64,14 +64,15 @@ public class ConversionServiceImpl implements ConversionService {
         }
 
         // 3. Обновляем запись
-        task.setStatus(ConversionTask.TaskStatus.UPLOADED);
-        task.setOriginalFileKey(originalFileKey);
-        conversionTaskRepository.save(task);
+        ConversionTask managedTask = conversionTaskRepository.findById(taskId)
+                .orElseThrow(() -> new ConversionTaskNotFoundException("Задача не найдена после загрузки"));
+        managedTask.setStatus(ConversionTask.TaskStatus.UPLOADED);
+        conversionTaskRepository.save(managedTask);
 
         return new ConversionTaskResponseDto(
-                taskId,
-                ConversionTask.TaskStatus.UPLOADED,
-                task.getCreatedAt()
+                managedTask.getId(),
+                managedTask.getStatus(),
+                managedTask.getCreatedAt()
         );
     }
 
