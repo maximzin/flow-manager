@@ -1,16 +1,17 @@
 package com.zinoviev.flowManager.conversion.service;
 
+import com.zinoviev.flowManager.conversion.api.SubscriptionServiceClient;
 import com.zinoviev.flowManager.conversion.dao.ConversionTaskRepository;
 import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
-import com.zinoviev.flowManager.conversion.exception.ConversionProcessingException;
-import com.zinoviev.flowManager.conversion.exception.ConversionTaskNotFoundException;
-import com.zinoviev.flowManager.conversion.exception.FileNotConvertedException;
-import com.zinoviev.flowManager.conversion.exception.FileUploadException;
+import com.zinoviev.flowManager.conversion.dto.SubscriptionCheckRequestDto;
+import com.zinoviev.flowManager.conversion.dto.SubscriptionCheckResultDto;
+import com.zinoviev.flowManager.conversion.exception.*;
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.conversion.messaging.event.ConversionCreatedEvent;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
 import com.zinoviev.flowManager.storage.service.StorageService;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -43,9 +44,22 @@ public class ConversionServiceImpl implements ConversionService {
     private final StorageService storageService;
     private final ConversionTaskRepository conversionTaskRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final SubscriptionServiceClient subscriptionServiceClient;
 
     @Override
-    public ConversionTaskResponseDto processFileFromUser(MultipartFile file) {
+    public ConversionTaskResponseDto processFileFromUser(String username, MultipartFile file) {
+
+        // Проверка подписки
+        SubscriptionCheckResultDto checkResult = checkSubscriptionOfUser(username, file.getSize());
+        if (!checkResult.allowed()) {
+            log.info("Ошибка подписки у пользователя: {}, сообщение: {}", username, checkResult.message());
+            throw new SubscriptionTypeException(checkResult.message());
+        }
+        log.info("Подписка позволяет пользователю: {} загрузить файл", username);
+
+        // Проверка наличия файла
+        if (file.getSize() <= 0) throw new EmptyFileUploadException("Пришёл пустой файл");
+
         // 1. Создаём запись в БД
         UUID taskId = UUID.randomUUID();
         String originalFileKey = originalFilesDir + taskId + "/" + file.getOriginalFilename();
@@ -75,6 +89,18 @@ public class ConversionServiceImpl implements ConversionService {
                 managedTask.getCreatedAt()
         );
     }
+
+    @Override
+    public SubscriptionCheckResultDto checkSubscriptionOfUser(String username, long fileSize) {
+        SubscriptionCheckRequestDto checkRequest = new SubscriptionCheckRequestDto(fileSize);
+        try {
+            return subscriptionServiceClient.checkSubscription(username, checkRequest);
+        } catch (FeignException e) {
+            log.error("Сервис подписок недоступен", e);
+            throw new SubscriptionServiceUnavailableException("Сервис подписок недоступен");
+        }
+    }
+
 
     @Override
     public void sendTasksToKafka() throws ExecutionException, InterruptedException {

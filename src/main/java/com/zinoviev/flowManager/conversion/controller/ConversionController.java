@@ -6,6 +6,7 @@ import com.zinoviev.flowManager.conversion.exception.FileDownloadException;
 import com.zinoviev.flowManager.conversion.service.ConversionService;
 import com.zinoviev.flowManager.core.util.FileKeyUtils;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
@@ -30,8 +31,11 @@ public class ConversionController {
     private final ConversionService conversionService;
 
     @PostMapping
-    public ResponseEntity<ConversionTaskResponseDto> uploadFileForConversion(@RequestParam("file") MultipartFile fileFromUser) {
-        ConversionTaskResponseDto responseDto = conversionService.processFileFromUser(fileFromUser);
+    public ResponseEntity<ConversionTaskResponseDto> uploadFileForConversion(
+            @RequestParam("file") MultipartFile fileFromUser,
+            @RequestHeader("X-User-Name") String username) {
+
+        ConversionTaskResponseDto responseDto = conversionService.processFileFromUser(username, fileFromUser);
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")

@@ -64,4 +64,15 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
+
+    @ExceptionHandler(ServiceUnavaiableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ResponseEntity<ExceptionDto> handleServiceUnavailableException(UploadException ex) {
+        ExceptionDto body = new ExceptionDto(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Ошибка доступа к ресурсу",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
 }

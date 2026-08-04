@@ -33,6 +33,15 @@ spring:
   liquibase:
     change-log: classpath:db/db.changelog-master.yaml
 
+  ### Cloud
+  cloud:
+    openfeign:
+      client:
+        config:
+          subscription-service:
+            connect-timeout: 5000
+            read-timeout: 5000
+
 ### Topic names
 topic:
   conversion:
