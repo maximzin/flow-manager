@@ -1,6 +1,7 @@
-package com.zinoviev.flowManager.conversion.service;
+package com.zinoviev.flowManager.conversion.service.conversion;
 
 import com.zinoviev.flowManager.conversion.api.SubscriptionServiceClient;
+import com.zinoviev.flowManager.conversion.cache.service.SubscriptionCacheService;
 import com.zinoviev.flowManager.conversion.dao.ConversionTaskRepository;
 import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
@@ -45,20 +46,21 @@ public class ConversionServiceImpl implements ConversionService {
     private final ConversionTaskRepository conversionTaskRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final SubscriptionServiceClient subscriptionServiceClient;
+    private final SubscriptionCacheService subscriptionCacheService;
 
     @Override
-    public ConversionTaskResponseDto processFileFromUser(String username, MultipartFile file) {
-
-        // Проверка подписки
-        SubscriptionCheckResultDto checkResult = checkSubscriptionOfUser(username, file.getSize());
-        if (!checkResult.allowed()) {
-            log.info("Ошибка подписки у пользователя: {}, сообщение: {}", username, checkResult.message());
-            throw new SubscriptionTypeException(checkResult.message());
-        }
-        log.info("Подписка позволяет пользователю: {} загрузить файл", username);
+    public ConversionTaskResponseDto processFileFromUser(String userLogin, MultipartFile file) {
 
         // Проверка наличия файла
         if (file.getSize() <= 0) throw new EmptyFileUploadException("Пришёл пустой файл");
+
+        // Проверка подписки
+        SubscriptionCheckResultDto checkResult = subscriptionCacheService.checkSubscription(userLogin, file.getSize());
+        if (!checkResult.allowed()) {
+            log.info("Ошибка подписки у пользователя: {}, сообщение: {}", userLogin, checkResult.message());
+            throw new SubscriptionTypeException(checkResult.message());
+        }
+        log.info("Подписка позволяет пользователю: {} загрузить файл", userLogin);
 
         // 1. Создаём запись в БД
         UUID taskId = UUID.randomUUID();
@@ -89,18 +91,6 @@ public class ConversionServiceImpl implements ConversionService {
                 managedTask.getCreatedAt()
         );
     }
-
-    @Override
-    public SubscriptionCheckResultDto checkSubscriptionOfUser(String username, long fileSize) {
-        SubscriptionCheckRequestDto checkRequest = new SubscriptionCheckRequestDto(fileSize);
-        try {
-            return subscriptionServiceClient.checkSubscription(username, checkRequest);
-        } catch (FeignException e) {
-            log.error("Сервис подписок недоступен", e);
-            throw new SubscriptionServiceUnavailableException("Сервис подписок недоступен");
-        }
-    }
-
 
     @Override
     public void sendTasksToKafka() throws ExecutionException, InterruptedException {

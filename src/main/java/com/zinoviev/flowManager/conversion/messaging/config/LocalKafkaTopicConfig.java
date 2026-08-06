@@ -1,4 +1,4 @@
-package com.zinoviev.flowManager.conversion.config;
+package com.zinoviev.flowManager.conversion.messaging.config;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.beans.factory.annotation.Value;

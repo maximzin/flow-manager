@@ -2,19 +2,12 @@ package com.zinoviev.flowManager.conversion.dto;
 
 import java.time.Instant;
 
-public record SubscriptionCheckResultDto(
-
+public record CachedSubscriptionCheck(
         String userLogin,
         boolean allowed,
-
-        SubscriptionTypeName subscriptionTypeName,
-
+        SubscriptionTypeName subscriptionType,
         Long maxFileSizeBytes,
-
         Instant expiresAt,
-
-        String message
-
+        Instant cachedAt
 ) {
 }
-

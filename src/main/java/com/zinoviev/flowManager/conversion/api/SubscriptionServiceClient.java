@@ -12,7 +12,7 @@ public interface SubscriptionServiceClient {
 
     @PostMapping("/api/v1/subscriptions/check")
     SubscriptionCheckResultDto checkSubscription(
-            @RequestHeader("X-User-Name") String username,
+            @RequestHeader("X-User-Login") String userLogin,
             @RequestBody SubscriptionCheckRequestDto request
     );
 }

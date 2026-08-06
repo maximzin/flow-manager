@@ -1,4 +1,4 @@
-package com.zinoviev.flowManager.conversion.service;
+package com.zinoviev.flowManager.conversion.service.conversion;
 
 import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
@@ -11,9 +11,7 @@ import java.util.concurrent.ExecutionException;
 
 public interface ConversionService {
 
-    ConversionTaskResponseDto processFileFromUser(String username, MultipartFile file);
-
-    SubscriptionCheckResultDto checkSubscriptionOfUser(String username, long fileSize);
+    ConversionTaskResponseDto processFileFromUser(String userLogin, MultipartFile file);
 
     void sendTasksToKafka() throws ExecutionException, InterruptedException;
 

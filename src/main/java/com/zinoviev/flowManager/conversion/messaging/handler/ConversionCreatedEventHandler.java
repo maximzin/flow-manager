@@ -22,8 +22,9 @@ import java.util.UUID;
 @Slf4j
 @RequiredArgsConstructor
 @KafkaListener(
-        topics = "${topic.conversion.processed.events}",
-        groupId = "${spring.kafka.consumer.group-id}")
+        topics = "#{kafkaConsumerProperties.consumers['conversion-events'].topic}",
+        groupId = "#{kafkaConsumerProperties.consumers['conversion-events'].groupId}",
+        containerFactory = "conversionEventsKafkaListenerContainerFactory")
 public class ConversionCreatedEventHandler {
 
     private final ConversionTaskRepository conversionTaskRepository;
