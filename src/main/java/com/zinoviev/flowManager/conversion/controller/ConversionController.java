@@ -3,7 +3,7 @@ package com.zinoviev.flowManager.conversion.controller;
 import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
 import com.zinoviev.flowManager.conversion.exception.FileDownloadException;
-import com.zinoviev.flowManager.conversion.service.conversion.ConversionService;
+import com.zinoviev.flowManager.conversion.service.ConversionService;
 import com.zinoviev.flowManager.core.util.FileKeyUtils;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
 import lombok.RequiredArgsConstructor;

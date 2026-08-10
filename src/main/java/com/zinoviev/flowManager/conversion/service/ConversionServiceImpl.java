@@ -1,18 +1,16 @@
-package com.zinoviev.flowManager.conversion.service.conversion;
+package com.zinoviev.flowManager.conversion.service;
 
 import com.zinoviev.flowManager.conversion.api.SubscriptionServiceClient;
 import com.zinoviev.flowManager.conversion.cache.service.SubscriptionCacheService;
 import com.zinoviev.flowManager.conversion.dao.ConversionTaskRepository;
 import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
-import com.zinoviev.flowManager.conversion.dto.SubscriptionCheckRequestDto;
 import com.zinoviev.flowManager.conversion.dto.SubscriptionCheckResultDto;
 import com.zinoviev.flowManager.conversion.exception.*;
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.conversion.messaging.event.ConversionCreatedEvent;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
 import com.zinoviev.flowManager.storage.service.StorageService;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerRecord;
