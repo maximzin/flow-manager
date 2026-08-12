@@ -1,0 +1,12 @@
+Отправить сообщение в топик
+opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic conversion-processed-events-topic --property parse.key=true --property "key.separator=:"
+
+Само сообщение для топика "conversion-processed-events-topic":
+d31b5a97-2512-4010-acbc-34db9472080b:{"eventId": "bea5098c-cfd2-4c2b-b72c-400aa26a0c5a","status": "COMPLETED", "originalFileKey":"/original/text.txt", "convertedFileKey":"/converted/pdf/text.pdf", "errorMessage":"null", "createdAt": "2026-06-28T10:00:00Z"}
+
+Получить сообщения:
+### Топик conversion-created-events-topic
+opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic conversion-created-events-topic --from-beginning --property print.key=true
+
+### Топик conversion-processed-events-topic
+opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic conversion-processed-events-topic --from-beginning --property print.key=true

@@ -1,3 +1,111 @@
 spring:
   application:
     name: flow-manager
+
+  ### Kafka
+  kafka:
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 5
+      properties:
+        retry.backoff: 1000
+        delivery.timeout.ms: 120000
+        enable.idempotence: true
+        linger.ms: 0
+        max.in.flight.requests.per.connection: 5
+        request.timeout.ms: 30000
+
+  ### Postgres DB
+  jpa:
+    database: postgresql
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    change-log: classpath:db/db.changelog-master.yaml
+
+  ### Cache
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  ### Cloud
+  cloud:
+    openfeign:
+      client:
+        config:
+          subscription-service:
+            connect-timeout: 5000
+            read-timeout: 5000
+
+### Custom Kafka consumers
+app:
+  kafka:
+    consumers:
+      conversion-events:
+        topic: ${topic.conversion.processed.events}
+        group-id: conversion-processed-events-group
+        trusted-packages: com.zinoviev.conversion_microservice.messaging.event.*
+        type-mapping:
+          source: com.zinoviev.conversion_microservice.messaging.event.ConversionProcessedEvent
+          target: com.zinoviev.flowManager.conversion.messaging.event.ConversionProcessedEvent
+        default-type: com.zinoviev.flowManager.conversion.messaging.event.ConversionProcessedEvent
+      subscription-events:
+        topic: ${topic.subscription.invalidated.events}
+        group-id: flow-manager-cache-invalidation-group
+        trusted-packages: com.zinoviev.subscriptionService.event.*
+        type-mapping:
+          source: com.zinoviev.subscriptionService.event.SubscriptionInvalidatedEvent
+          target: com.zinoviev.flowManager.conversion.messaging.event.SubscriptionInvalidatedEvent
+        default-type: com.zinoviev.flowManager.conversion.messaging.event.SubscriptionInvalidatedEvent
+  cache:
+    subscription:
+      ttl-minutes: 5
+
+### Topic names
+topic:
+  conversion:
+    created:
+      events: conversion-created-events-topic
+    processed:
+      events: conversion-processed-events-topic
+  subscription:
+    invalidated:
+      events: subscription-invalidated-events-topic
+
+### MinIO dir paths
+storage:
+  directory:
+    conversion:
+      original: /original/
+
+outbox:
+  conversion:
+    sending-period-cron: '0 */5 * * * *' # каждые 5 минут'
+
+conversion:
+  uploading-tasks:
+    duration-minutes-to-cleanup: 30    # приводим в порядок записи, которым > минут
+    cleanup-period-cron: '0 * * * * *' # каждую минуту
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    enable:
+      lettuce: true
+  endpoint:
+    prometheus:
+      enabled: true
+
+logging:
+  charset:
+    console: UTF-8

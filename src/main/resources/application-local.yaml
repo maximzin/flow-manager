@@ -1,0 +1,32 @@
+spring:
+  ### Kafka
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  ### Postgres DB
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5433/flow_manager
+    username: myuser
+    password: 12345
+
+### MinIO config
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: conversion
+
+outbox:
+  conversion:
+    sending-period-cron: '0 * * * * *'    ### каждую минуту'
+
+### Eureka config
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    enabled: true
+
+server:
+  port: 8080
