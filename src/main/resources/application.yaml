@@ -91,7 +91,20 @@ conversion:
     duration-minutes-to-cleanup: 30    # приводим в порядок записи, которым > минут
     cleanup-period-cron: '0 * * * * *' # каждую минуту
 
-
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    enable:
+      lettuce: true
+  endpoint:
+    prometheus:
+      enabled: true
 
 logging:
   charset:

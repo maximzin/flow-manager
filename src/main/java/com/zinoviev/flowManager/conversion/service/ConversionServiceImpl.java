@@ -7,6 +7,7 @@ import com.zinoviev.flowManager.conversion.dto.ConversionStatusResponseDto;
 import com.zinoviev.flowManager.conversion.dto.ConversionTaskResponseDto;
 import com.zinoviev.flowManager.conversion.dto.SubscriptionCheckResultDto;
 import com.zinoviev.flowManager.conversion.exception.*;
+import com.zinoviev.flowManager.conversion.metrics.SubscriptionMetrics;
 import com.zinoviev.flowManager.conversion.model.ConversionTask;
 import com.zinoviev.flowManager.conversion.messaging.event.ConversionCreatedEvent;
 import com.zinoviev.flowManager.storage.dto.StorageFileDto;
@@ -45,6 +46,7 @@ public class ConversionServiceImpl implements ConversionService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final SubscriptionServiceClient subscriptionServiceClient;
     private final SubscriptionCacheService subscriptionCacheService;
+    private final SubscriptionMetrics subscriptionMetrics;
 
     @Override
     public ConversionTaskResponseDto processFileFromUser(String userLogin, MultipartFile file) {
@@ -82,6 +84,8 @@ public class ConversionServiceImpl implements ConversionService {
                 .orElseThrow(() -> new ConversionTaskNotFoundException("Задача не найдена после загрузки"));
         managedTask.setStatus(ConversionTask.TaskStatus.UPLOADED);
         conversionTaskRepository.save(managedTask);
+
+        subscriptionMetrics.recordProcessedTask(checkResult.subscriptionTypeName());
 
         return new ConversionTaskResponseDto(
                 managedTask.getId(),
